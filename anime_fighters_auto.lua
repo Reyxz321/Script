@@ -1,67 +1,40 @@
--- Simple Auto Attack for Anime Fighters Simulator
+-- Direct Auto Attack Script for Anime Fighters Simulator
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
+local attackRange = 50
 
--- Configuration
-local attackRange = 50 -- Detection range in studs
-local attackDelay = 0.1 -- Time between attacks
-
--- Find nearest enemy function
-local function findNearestEnemy()
-    local nearestEnemy = nil
-    local maxDistance = attackRange
-    local playerPos = character.PrimaryPart.Position
-    
-    -- Look for enemies in workspace
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj.Humanoid.Health > 0 and 
-           obj ~= character and not Players:GetPlayerFromCharacter(obj) then
-            local distance = (obj.PrimaryPart.Position - playerPos).Magnitude
-            if distance < maxDistance then
-                nearestEnemy = obj
-                maxDistance = distance
+-- Function to find and attack enemies
+local function attackLoop()
+    while true do
+        local playerPos = character.PrimaryPart.Position
+        
+        -- Find all enemies in range
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj.Humanoid.Health > 0 and 
+               obj ~= character and not Players:GetPlayerFromCharacter(obj) then
+                local distance = (obj.PrimaryPart.Position - playerPos).Magnitude
+                
+                if distance <= attackRange then
+                    -- Try different attack methods
+                    pcall(function()
+                        game:GetService("ReplicatedStorage").Events.Combat:FireServer()
+                    end)
+                    
+                    pcall(function()
+                        game:GetService("ReplicatedStorage").Remotes.Attack:FireServer()
+                    end)
+                    
+                    pcall(function()
+                        game:GetService("ReplicatedStorage").RemoteEvents.Melee:FireServer()
+                    end)
+                end
             end
         end
-    end
-    
-    return nearestEnemy
-end
-
--- Auto attack function
-local function autoAttack()
-    while true do
-        local enemy = findNearestEnemy()
-        if enemy and humanoid and humanoid.Health > 0 then
-            -- Try different attack methods
-            pcall(function()
-                -- Method 1: Try to fire a remote event (common in Roblox games)
-                game:GetService("ReplicatedStorage"):WaitForChild("Events"):WaitForChild("Combat"):FireServer()
-            end)
-            
-            pcall(function()
-                -- Method 2: Try a different remote event path
-                game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Attack"):FireServer()
-            end)
-            
-            pcall(function()
-                -- Method 3: Try to directly control the character
-                humanoid:MoveTo(enemy.PrimaryPart.Position)
-            end)
-        end
-        wait(attackDelay)
+        
+        wait(0.1)
     end
 end
 
--- Start the auto attack
-spawn(autoAttack)
-
--- Notification
-local StarterGui = game:GetService("StarterGui")
-StarterGui:SetCore("ChatMakeSystemMessage", {
-    Text = "[Anime Fighters Simulator] Auto Attack script loaded!";
-    Color = Color3.fromRGB(0, 255, 0);
-    Font = Enum.Font.SourceSansBold;
-    Size = 18;
-})
+-- Start the attack loop
+spawn(attackLoop)
